@@ -1,0 +1,30 @@
+[Unit]
+Description=Withings MCP server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=withings
+Group=withings
+WorkingDirectory=/opt/withings-mcp
+EnvironmentFile=/etc/withings-mcp.env
+Environment=NODE_ENV=production HOST=127.0.0.1 PORT=3000 DB_PATH=/var/lib/withings-mcp/withings-mcp.db
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=2
+
+StateDirectory=withings-mcp
+StateDirectoryMode=0700
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
