@@ -14,6 +14,8 @@ export const config = {
   dbPath: process.env.DB_PATH ?? './data/withings-mcp.db',
   // Used to interpret YYYY-MM-DD dates in tool arguments and to format timestamps.
   timezone: process.env.DEFAULT_TIMEZONE ?? 'America/Los_Angeles',
+  // 'imperial' reports lb / in / mi / °F instead of Withings' native kg / m / °C.
+  units: process.env.UNITS === 'imperial' ? 'imperial' : 'metric',
   // Withings user ids allowed to connect. If empty, the first account to connect becomes the owner.
   allowedUserIds: (process.env.ALLOWED_WITHINGS_USERIDS ?? '')
     .split(',')

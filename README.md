@@ -33,6 +33,7 @@ npm run typecheck
 | `WITHINGS_CLIENT_ID` / `WITHINGS_CLIENT_SECRET` | From the Withings developer dashboard |
 | `ALLOWED_WITHINGS_USERIDS` | Optional comma-separated allowlist. Empty: first account to connect is locked in as owner |
 | `DEFAULT_TIMEZONE` | For interpreting dates (default `America/Los_Angeles`) |
+| `UNITS` | `imperial` for lb / in / mi / °F; default `metric` (Withings' native kg / m / °C) |
 | `DB_PATH`, `PORT`, `HOST` | SQLite path, listen address |
 
 ## Deployment (Hetzner)

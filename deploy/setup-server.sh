@@ -41,6 +41,7 @@ PUBLIC_URL=https://${DOMAIN}
 WITHINGS_CLIENT_ID=
 WITHINGS_CLIENT_SECRET=
 DEFAULT_TIMEZONE=America/Los_Angeles
+UNITS=imperial
 # Comma-separated Withings user ids. Empty = first account to connect becomes the owner.
 ALLOWED_WITHINGS_USERIDS=
 ENV

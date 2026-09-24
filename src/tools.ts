@@ -95,7 +95,33 @@ function tidy(data: Record<string, unknown>, seconds: Set<string>): Record<strin
   return out;
 }
 
-const json = (value: unknown): CallToolResult => ({ content: [{ type: 'text', text: JSON.stringify(value) }] });
+const round = (v: number, digits: number) => +v.toFixed(digits);
+const toF = (c: number) => round((c * 9) / 5 + 32, 1);
+
+// Withings reports SI units. In imperial mode, rename and convert unit-bearing fields
+// (identified by key) anywhere in a tool result.
+const IMPERIAL: [RegExp, (k: string) => string, (v: number) => number][] = [
+  [/_kg$/, k => k.replace(/_kg$/, '_lb'), v => round(v * 2.20462, 1)],
+  [/^height_m$/, () => 'height_in', v => round(v * 39.3701, 1)],
+  [/_c$/, k => k.replace(/_c$/, '_f'), toF],
+  [/^core_body_temperature_(avg|min|max)$/, k => `${k}_f`, toF],
+  [/^(manual_)?distance$/, k => `${k}_mi`, v => round(v / 1609.344, 2)],
+];
+
+export function localize(value: unknown, units = config.units): unknown {
+  if (units !== 'imperial') return value;
+  if (Array.isArray(value)) return value.map(v => localize(v, units));
+  if (value === null || typeof value !== 'object') return value;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) {
+    const rule = typeof v === 'number' ? IMPERIAL.find(([re]) => re.test(k)) : undefined;
+    if (rule) out[rule[1](k)] = rule[2](v as number);
+    else out[k] = localize(v, units);
+  }
+  return out;
+}
+
+const json = (value: unknown): CallToolResult => ({ content: [{ type: 'text', text: JSON.stringify(localize(value)) }] });
 
 async function run(fn: () => Promise<unknown>): Promise<CallToolResult> {
   try {
@@ -117,7 +143,10 @@ export function buildServer(withings: Withings, userid: string): McpServer {
       instructions:
         `Health data from the user's Withings account (scale, sleep tracker, watch, blood pressure monitor). ` +
         `Dates are interpreted in ${config.timezone} unless a record carries its own timezone. ` +
-        `Durations are reported in minutes (fields ending in _min).`,
+        `Durations are reported in minutes (fields ending in _min). ` +
+        (config.units === 'imperial'
+          ? 'Weights are in pounds (_lb), height in inches (_in), distances in miles (_mi), temperatures in °F (_f).'
+          : 'Weights are in kg, height and distances in meters, temperatures in °C.'),
     },
   );
   const tz = config.timezone;
@@ -133,7 +162,7 @@ export function buildServer(withings: Withings, userid: string): McpServer {
         'Each entry is one measurement session (e.g. one weigh-in) with all values taken together. Newest first.',
       inputSchema: {
         ...dateArgs(30),
-        types: z.array(z.enum(MEASURE_NAMES)).optional().describe('Limit to these measure types. Omit for all.'),
+        types: z.array(z.enum(MEASURE_NAMES)).optional().describe('Limit to these measure types (named in metric units; results follow the server unit setting). Omit for all.'),
         limit: z.number().int().min(1).max(1000).optional().describe('Maximum number of sessions to return (default 200).'),
       },
       annotations: readOnly,
@@ -217,7 +246,7 @@ export function buildServer(withings: Withings, userid: string): McpServer {
     {
       title: 'Daily activity',
       description:
-        'Daily activity totals: steps, distance (m), floors climbed, soft/moderate/intense activity minutes, active and total calories, ' +
+        'Daily activity totals: steps, distance, floors climbed, soft/moderate/intense activity minutes, active and total calories, ' +
         'daily heart rate stats and heart rate zone minutes. One entry per day, oldest first.',
       inputSchema: dateArgs(7),
       annotations: readOnly,
