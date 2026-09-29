@@ -12,6 +12,8 @@ export const config = {
   // Public origin Claude reaches us at; also the OAuth issuer.
   publicUrl: new URL(process.env.PUBLIC_URL ?? `http://localhost:${port}`),
   dbPath: process.env.DB_PATH ?? './data/withings-mcp.db',
+  // Optional long-lived bearer tokens for clients that can't do OAuth; see static-tokens.ts.
+  staticTokensFile: process.env.STATIC_TOKENS_FILE || undefined,
   // Used to interpret YYYY-MM-DD dates in tool arguments and to format timestamps.
   timezone: process.env.DEFAULT_TIMEZONE ?? 'America/Los_Angeles',
   // 'imperial' reports lb / in / mi / °F instead of Withings' native kg / m / °C.

@@ -6,6 +6,7 @@ import type { OAuthClientInformationFull, OAuthTokenRevocationRequest, OAuthToke
 import { InvalidGrantError, InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.js';
 import { config } from './config.js';
 import { type Db, type Grant, now, randomToken } from './db.js';
+import { lookupStaticToken } from './static-tokens.js';
 import type { Withings } from './withings.js';
 
 const PENDING_TTL = 10 * 60;
@@ -149,6 +150,18 @@ export class WithingsOAuthProvider implements OAuthServerProvider {
   }
 
   async verifyAccessToken(token: string): Promise<AuthInfo> {
+    const fixed = lookupStaticToken(config.staticTokensFile, token);
+    if (fixed) {
+      return {
+        token,
+        clientId: `static:${fixed.source}`,
+        scopes: [],
+        // Static tokens don't expire (revoke by removing the line), but the SDK
+        // requires an expiry, so each check vouches for the next minute.
+        expiresAt: now() + 60,
+        extra: { userid: fixed.userid },
+      };
+    }
     const grant = this.db.getToken(token, 'access');
     if (!grant) throw new InvalidTokenError('Invalid or expired access token');
     return {

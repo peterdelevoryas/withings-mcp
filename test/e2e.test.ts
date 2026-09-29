@@ -5,6 +5,9 @@ import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import express from 'express';
 
 const OWNER = '4242';
@@ -60,11 +63,16 @@ fake.post('/v2/measure', authed(b => {
 fake.post('/v2/heart', authed(() => ({ more: false, offset: 0, series: [{ timestamp: 1758700000, timezone: 'America/Los_Angeles', heart_rate: 62, ecg: { signalid: 1, afib: 0 } }] })));
 fake.post('/v2/user', authed(() => ({ devices: [{ type: 'Scale', model: 'Body Scan', battery: 'high', last_session_date: 1758700000, timezone: 'America/Los_Angeles' }] })));
 
+const STATIC_TOKEN = 'static-test-token';
+const staticTokensFile = join(mkdtempSync(join(tmpdir(), 'withings-mcp-')), 'tokens');
+const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
+
 let fakeServer: ReturnType<typeof fake.listen>;
 let app: ChildProcess;
 let base = '';
 
 before(async () => {
+  writeFileSync(staticTokensFile, `# comment\n${sha256(STATIC_TOKEN)} agent ${OWNER}\n`);
   fakeServer = fake.listen(0, '127.0.0.1');
   await new Promise(r => fakeServer.once('listening', r));
   const fakeBase = `http://127.0.0.1:${(fakeServer.address() as AddressInfo).port}`;
@@ -80,6 +88,7 @@ before(async () => {
       WITHINGS_CLIENT_SECRET: 'csecret',
       WITHINGS_AUTHORIZE_URL: `${fakeBase}/authorize`,
       WITHINGS_API_BASE: fakeBase,
+      STATIC_TOKENS_FILE: staticTokensFile,
     },
     stdio: ['ignore', 'pipe', 'inherit'],
   });
@@ -245,6 +254,15 @@ test('MCP refresh tokens rotate', async () => {
   await rpc(r.body.access_token, 'tools/list');
   const reuse = await tokenRequest(client, { grant_type: 'refresh_token', refresh_token: refreshToken });
   assert.equal(reuse.status, 400);
+});
+
+test('a static bearer token acts as its Withings user, and removing its line revokes it', async () => {
+  const tools = await rpc(STATIC_TOKEN, 'tools/list');
+  assert.ok(tools.tools.length > 0);
+  await callTool(STATIC_TOKEN, 'get_sleep');
+  writeFileSync(staticTokensFile, '');
+  const r = await fetch(`${base}/mcp`, { method: 'POST', headers: { authorization: `Bearer ${STATIC_TOKEN}` } });
+  assert.equal(r.status, 401);
 });
 
 test('garbage bearer tokens are rejected', async () => {

@@ -13,6 +13,8 @@ sudo -u withings npm ci --no-audit --no-fund --loglevel=error
 sudo -u withings npm run build --silent
 sudo -u withings npm prune --omit=dev --no-audit --no-fund --loglevel=error
 install -m 644 deploy/withings-mcp.service /etc/systemd/system/withings-mcp.service
+install -d -m 0750 -o root -g withings /etc/withings-mcp
+[ -f /etc/withings-mcp/tokens ] || install -m 0640 -o root -g withings /dev/null /etc/withings-mcp/tokens
 install -m 644 deploy/Caddyfile /etc/caddy/Caddyfile
 systemctl daemon-reload
 systemctl enable withings-mcp >/dev/null
