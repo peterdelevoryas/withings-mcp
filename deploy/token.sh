@@ -10,7 +10,7 @@
 set -euo pipefail
 [ $# -ge 1 ] || { sed -n 's/^# \{0,1\}//; 2,9p' "$0" >&2; exit 2; }
 source=$1
-HOST="${2:-root@withings.pjd.dev}"
+HOST="${2:-root@10.0.0.11}"
 [[ $source =~ ^[A-Za-z0-9_-]+$ ]] || { echo "source must be a single word, e.g. agent" >&2; exit 1; }
 token=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')
 token_hash=$(printf '%s' "$token" | shasum -a 256 | cut -d' ' -f1)

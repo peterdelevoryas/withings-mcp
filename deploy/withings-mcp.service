@@ -8,7 +8,9 @@ User=withings
 Group=withings
 WorkingDirectory=/opt/withings-mcp
 EnvironmentFile=/etc/withings-mcp.env
-Environment=NODE_ENV=production HOST=127.0.0.1 PORT=3000 DB_PATH=/var/lib/withings-mcp/withings-mcp.db
+# Listens on the private network; the edge server's Caddy terminates HTTPS and
+# proxies here.
+Environment=NODE_ENV=production HOST=10.0.0.11 PORT=3000 DB_PATH=/var/lib/withings-mcp/withings-mcp.db
 # Long-lived bearer tokens for clients that can't do OAuth; minted by deploy/token.sh.
 Environment=STATIC_TOKENS_FILE=/etc/withings-mcp/tokens
 ExecStart=/usr/bin/node dist/index.js

@@ -39,15 +39,17 @@ npm run typecheck
 ## Deployment (Hetzner)
 
 1. Create a Withings app at <https://developer.withings.com/dashboard/> with callback URL `https://withings.pjd.dev/withings/callback`.
-2. Create an Ubuntu 24.04 server with your SSH key, then point an `A` record for `withings.pjd.dev` at it.
+2. Create an Ubuntu 24.04 server with your SSH key on the private network at 10.0.0.11, with no public IP. The
+   edge server (github.com/peterdelevoryas/edge) terminates HTTPS for `withings.pjd.dev` and proxies to
+   `10.0.0.11:3000`, NATs the server's outbound traffic, and is the SSH jump host.
 3. First deploy:
    ```sh
-   ssh root@<ip> DOMAIN=withings.pjd.dev bash -s < deploy/setup-server.sh   # Node, Caddy, firewall, user, env file
-   ssh root@<ip> 'nano /etc/withings-mcp.env'                                 # fill in client id/secret
-   deploy/deploy.sh root@<ip>
+   ssh root@10.0.0.11 DOMAIN=withings.pjd.dev bash -s < deploy/setup-server.sh   # Node, firewall, user, env file
+   ssh root@10.0.0.11 'nano /etc/withings-mcp.env'                                 # fill in client id/secret
+   deploy/deploy.sh
    ```
 4. Subsequent deploys: `deploy/deploy.sh`.
 5. In Claude: Settings → Connectors → Add custom connector → `https://withings.pjd.dev/mcp`.
    In Claude Code: `claude mcp add --transport http withings https://withings.pjd.dev/mcp`.
 
-Logs: `ssh root@withings.pjd.dev journalctl -u withings-mcp -f`
+Logs: `ssh root@10.0.0.11 journalctl -u withings-mcp -f`

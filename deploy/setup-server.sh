@@ -14,18 +14,10 @@ if ! node --version 2>/dev/null | grep -q '^v24'; then
   apt-get install -yq nodejs
 fi
 
-# Caddy (automatic HTTPS)
-if ! command -v caddy >/dev/null; then
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' > /etc/apt/sources.list.d/caddy-stable.list
-  apt-get update -q
-  apt-get install -yq caddy
-fi
-
-# Firewall: SSH + HTTP(S) only
+# Firewall: SSH, and the app's port from the private network, where the edge
+# server's Caddy terminates HTTPS and proxies to it.
 ufw allow OpenSSH
-ufw allow 80/tcp
-ufw allow 443/tcp
+ufw allow from 10.0.0.0/16 to any port 3000 proto tcp
 ufw --force enable
 
 # Key-only SSH
@@ -48,9 +40,4 @@ ENV
   chmod 600 /etc/withings-mcp.env
 fi
 
-echo "DOMAIN=${DOMAIN}" > /etc/default/caddy
-mkdir -p /etc/systemd/system/caddy.service.d
-printf '[Service]\nEnvironmentFile=/etc/default/caddy\n' > /etc/systemd/system/caddy.service.d/env.conf
-systemctl daemon-reload
-systemctl enable caddy
 echo "Server setup done."
