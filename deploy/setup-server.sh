@@ -4,6 +4,13 @@
 set -euo pipefail
 : "${DOMAIN:?set DOMAIN}"
 
+# The server has no public address: Hetzner gives it no default route and no
+# DNS, so send its traffic through the network gateway to the edge's NAT.
+iface=$(ip -o -4 addr show to 10.0.0.0/16 | awk '{print $2; exit}')
+printf 'network:\n  version: 2\n  ethernets:\n    %s:\n      routes:\n      - to: default\n        via: 10.0.0.1\n        on-link: true\n      nameservers:\n        addresses: [185.12.64.1, 185.12.64.2]\n' "$iface" > /etc/netplan/60-edge-nat.yaml
+chmod 600 /etc/netplan/60-edge-nat.yaml
+netplan apply
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
 apt-get install -yq curl gnupg ufw unattended-upgrades rsync debian-keyring debian-archive-keyring apt-transport-https
